@@ -176,6 +176,8 @@
             box-shadow: 0 0 20px rgba(0, 210, 190, 0.3);
             transition: all 0.2s;
             margin-top: 2px;
+            cursor: pointer; /* 強制手型游標 */
+            user-select: none;
         }
 
         .cta-btn:hover {
@@ -457,7 +459,10 @@
                 </div>
             </div>
             <div>
-                <a href="https://creators.swag.live/d12d" class="cta-btn" data-i18n="cta" target="_blank">查看人氣女神活動</a>
+                <!-- 優化修改：使用 div + onclick 替代 a 標籤，解決 iframe 內第一次點擊不跳轉問題 -->
+                <div class="cta-btn" data-i18n="cta" onclick="openExternalLink('https://creators.swag.live/d12d')">
+                    查看人氣女神活動
+                </div>
             </div>
         </div>
 
@@ -552,10 +557,24 @@
     </div>
 
     <script>
-        const API_BASE_URL = "https://campaign-api-v2-905468082258.asia-east1.run.app"; 
+        // 重要：請將此處替換為您剛剛從 Cloud Run 部署後取得的 Service URL
+        const API_BASE_URL = "https://campaign-api-905468082258.asia-east1.run.app"; 
 
         let currentLang = 'tc';
         let currentErrorState = null; 
+
+        // 優化修改：確保在各種 iframe 或 webview 環境下都能開啟外部連結
+        function openExternalLink(url) {
+            // 使用 setTimeout(..., 0) 可以讓執行緒脫離當前的事件堆疊
+            // 這在解決 iOS Webview 或複雜 iframe 首次點擊無效的問題非常有效
+            setTimeout(() => {
+                const win = window.open(url, '_blank');
+                // 如果彈窗被瀏覽器強力阻擋 (window.open 返回 null)，則退而求其次在當前頁面跳轉
+                if (!win) {
+                    window.location.href = url;
+                }
+            }, 0);
+        }
 
         const TRANSLATIONS = {
             tc: {
@@ -831,14 +850,11 @@
                     credentials: 'omit'
                 });
 
-                // 新邏輯：不再檢查 404，只檢查是否為 200 OK 以外的錯誤 (例如 400 Bad Request 或 500)
                 if (!response.ok) throw new Error(`API Status: ${response.status}`);
 
                 const data = await response.json();
 
-                // 1. 處理用戶數據
                 if (data.user_stats) {
-                    // 有數據，填入
                     document.getElementById('disp-rank').textContent = data.user_stats.rank;
                     document.getElementById('disp-total').textContent = (data.user_stats.total_diamond_cost || 0).toLocaleString();
                     
@@ -850,11 +866,9 @@
                         document.getElementById('disp-lovense').textContent = (bd.lovense_diamonds || 0).toLocaleString();
                     }
                 } else {
-                    // 查無此人 (user_stats 為 null)，重置看板為初始狀態
                     resetDashboard();
                 }
 
-                // 2. 處理排行榜 (無論是否有用戶數據都渲染)
                 if (data.leaderboard_top_10 && Array.isArray(data.leaderboard_top_10) && data.leaderboard_top_10.length > 0) {
                     currentLeaderboard = data.leaderboard_top_10;
                     renderTables();
