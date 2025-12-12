@@ -458,9 +458,13 @@
                     </div>
                 </div>
             </div>
+      
+            <!-- 🔴🔴🔴 修改重點 HTML 1：按鈕加入 style cursor: pointer 確保手感 🔴🔴🔴 -->
             <div>
-                <!-- 優化修改：使用 div + onclick 替代 a 標籤，解決 iframe 內第一次點擊不跳轉問題 -->
-                <div class="cta-btn" data-i18n="cta" onclick="openExternalLink('https://creators.swag.live/d12d')">
+                <div class="cta-btn" 
+                     style="cursor: pointer;" 
+                     data-i18n="cta" 
+                     onclick="openExternalLink('https://creators.swag.live/d12d')">
                     查看人氣女神活動
                 </div>
             </div>
@@ -563,17 +567,20 @@
         let currentLang = 'tc';
         let currentErrorState = null; 
 
-        // 優化修改：確保在各種 iframe 或 webview 環境下都能開啟外部連結
+        // 🔴🔴🔴 修改重點 JavaScript 2：強制跳轉邏輯，解決 iframe 無法跳出問題 🔴🔴🔴
         function openExternalLink(url) {
-            // 使用 setTimeout(..., 0) 可以讓執行緒脫離當前的事件堆疊
-            // 這在解決 iOS Webview 或複雜 iframe 首次點擊無效的問題非常有效
-            setTimeout(() => {
-                const win = window.open(url, '_blank');
-                // 如果彈窗被瀏覽器強力阻擋 (window.open 返回 null)，則退而求其次在當前頁面跳轉
-                if (!win) {
-                    window.location.href = url;
-                }
-            }, 0);
+            // 第一步：嘗試開啟新分頁 (加入 noopener,noreferrer 以增加成功率)
+            var newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+
+            // 第二步：檢查新分頁是否被瀏覽器或 App 攔截
+            // 如果 newWindow 是 null，或瞬間被關閉，代表被擋下了
+            if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                console.log("Popup blocked, forcing top navigation.");
+                
+                // 第三步：強制父視窗跳轉 (Break out of iframe)
+                // 這是解決「點擊沒反應」或「卡在 iframe 內」的最強手段
+                window.top.location.href = url;
+            }
         }
 
         const TRANSLATIONS = {
